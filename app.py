@@ -67,7 +67,7 @@ def index():
 @app.route('/venues')
 def venues():
     # TODO: replace with real venues data.
-    #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
+    # num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
 
     data = []
     results = Venue.query.distinct(Venue.city, Venue.state).all()
@@ -507,7 +507,7 @@ def create_artist_submission():  # from template
     # called upon submitting the new artist listing form
     # TODO: insert form data as a new Venue record in the db, instead
     # TODO: modify data to be the data object returned from db insertion
-    
+
     form = ArtistForm(request.form)  # request.form
 
     if form.validate():
