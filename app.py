@@ -66,7 +66,7 @@ def index():
 @app.route('/venues')
 def venues():
     # TODO: replace with real venues data.
-    #       num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
+    # num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
 
     data = []
     results = Venue.query.distinct(Venue.city, Venue.state).all()
@@ -136,14 +136,13 @@ def show_venue(venue_id):
         # Redirect home
         return redirect(url_for('index'))
     else:
-        # add genre
-
         # List and count shows
         past_shows = []
         past_shows_count = 0
         upcoming_shows = []
         upcoming_shows_count = 0
         now = datetime.now()
+        
         for show in venue.shows:
             if show.start_time > now:
                 upcoming_shows_count += 1
@@ -507,6 +506,8 @@ def delete_artist(artist_id):
   finally:
     db.session.close()
 
+    # Freezes app when Artist has shows recorded. Works when no shows are recorded. Need to delete Venue of relative shows first.
+    
   return redirect(url_for('artists'))
 
 #  ----------------------------------------------------------------#
