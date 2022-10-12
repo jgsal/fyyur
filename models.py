@@ -22,7 +22,7 @@ class Show(db.Model):
     start_time = db.Column(db.DateTime, nullable=False)
 
     def __repr__(self):
-        return f'<Show {self.id} {self.start_time} artist_id={artist_id} venue_id={venue_id}>'
+        return f'<Show {self.id} Artist {self.artist_id}, Venue {self.venue_id}>'
 
 class Venue(db.Model):
     __tablename__ = 'venue'
@@ -53,7 +53,7 @@ class Artist(db.Model):
     city = db.Column(db.String(120))
     state = db.Column(db.String(120))
     phone = db.Column(db.String(120))
-    genres = db.Column(db.String(120))
+    genres = db.Column(db.ARRAY(db.String))
     image_link = db.Column(db.String(500))
     facebook_link = db.Column(db.String(120))
     website = db.Column(db.String(120))  # TODO: implement any missing fields, as a database migration using Flask-Migrate

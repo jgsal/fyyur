@@ -73,7 +73,7 @@
 </section>
 <section>
 <a href="/artists/{{ artist.id }}/edit"><button class="btn btn-primary btn-lg">Edit</button></a>
-<form action="/artists/{{ artist.id }}/delete" method="POST">
+<form action="{{ url_for('delete_artist', artist_id=artist.id) }}" method="POST">
     <button name="DelArtBtn" title="Artist Must have No Shows Recorded" class="btn btn-secondary btn-lg" type="submit">Delete Artist</button>
 </form>
 </section>
