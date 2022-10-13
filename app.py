@@ -68,24 +68,26 @@ def venues():
 
     data = []
     results = Venue.query.distinct(Venue.city, Venue.state).all()
+    current_date = datetime.now()
+
     for result in results:
-        city_state_unit = {
+        ven_city_state = {
             "city": result.city,
             "state": result.state
         }
         venues = Venue.query.filter_by(city=result.city, state=result.state).all()
 
-        # format each venue
-        formatted_venues = []
+        formatteddata = []
         for venue in venues:
-            formatted_venues.append({
+            formatteddata.append({
                 "id": venue.id,
                 "name": venue.name,
-                "num_upcoming_shows": len(list(filter(lambda x: x.start_time > datetime.now(), venue.shows)))
+                #lambda=anonymous function, returns single expression. Looping through and listing shows with future date; count items.
+                "num_upcoming_shows": len(list(filter(lambda n: n.start_time > current_date, venue.shows)))
             })
 
-        city_state_unit["venues"] = formatted_venues
-        data.append(city_state_unit)
+        ven_city_state["venues"] = formatteddata
+        data.append(ven_city_state)
 
     return render_template('pages/venues.html', areas=data)
 
@@ -96,35 +98,29 @@ def search_venues():
     # TODO: implement search on venues with partial string search. Ensure it is case-insensitive.
     # seach for Hop should return "The Musical Hop".
     # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
-    appSearch = request.form.get('search_term').strip()
-    stringMatches = Venue.query.filter(
-        Venue.name.ilike('%{}%'.format(appSearch))).all()
+    # strip removes trailing or leading spaces
+    appsearch = request.form.get('search_term').strip()
+    # Queryable Attribute, ilike insensitive, like sensitive. Formatting appsearch.
+    querymatches = Venue.query.filter(Venue.name.ilike('%{}%'.format(appsearch))).all()
 
     response = {}
     current_date = datetime.now()
     data = []
 
-    for venue in stringMatches:
-        venue_shows = Show.query.filter_by(venue_id=venue.id).all()
-        num_upcoming_shows = 0
-
-        for show in venue_shows:
-            if show.start_time > current_date:
-                num_upcoming_shows += 1
+    for venue in querymatches:
 
         data.append({
             'id': venue.id,
             'name': venue.name,
-            'num_upcoming_shows': num_upcoming_shows  # added to search_venues.html
+            'num_upcoming_shows': len(list(filter(lambda n: n.start_time > current_date, venue.shows)))  # added to search_venues.html
         })
-        print(data)
+        # print(data)
 
-        response = {}
-        response['count'] = len(stringMatches)
+        response['count'] = len(querymatches)
         response['data'] = data
         print(response)
 
-    return render_template('pages/search_venues.html', results=response, search_term=appSearch)
+    return render_template('pages/search_venues.html', results=response, search_term=appsearch)
 
 #  ----------------------------------------------------------------
 
@@ -134,53 +130,45 @@ def show_venue(venue_id):
     # shows the venue page with the given venue_id
     venue = Venue.query.get(venue_id)
     shows = Show.query.filter_by(venue_id=venue_id).all()
-    # print(venue)
-    if not venue:
-        # Redirect home
-        return redirect(url_for('index'))
-    else:
-        # List and count shows
-        past_shows = []
-        past_shows_count = 0
-        upcoming_shows = []
-        upcoming_shows_count = 0
-        now = datetime.now()
-        for show in shows:
-            if show.start_time > now:
-                upcoming_shows_count += 1
-                upcoming_shows.append({
-                    "artist_id": show.artist_id,
-                    "artist_name": show.artist.name,
-                    "artist_image_link": show.artist.image_link,
-                    "start_time": format_datetime(str(show.start_time))
-                })
-            if show.start_time < now:
-                past_shows_count += 1
-                past_shows.append({
-                    "artist_id": show.artist_id,
-                    "artist_name": show.artist.name,
-                    "artist_image_link": show.artist.image_link,
-                    "start_time": format_datetime(str(show.start_time))
-                })
+    past_shows = []
+    upcoming_shows = []
+    current_date = datetime.now()
 
-        data = {
-            "id": venue_id,
-            "name": venue.name,
-            "address": venue.address,
-            "city": venue.city,
-            "state": venue.state,
-            "phone": venue.phone,
-            "genres": venue.genres,
-            "website": venue.website,
-            "facebook_link": venue.facebook_link,
-            "seeking_talent": venue.seeking_talent,
-            "seeking_description": venue.seeking_description,
-            "image_link": venue.image_link,
-            "past_shows": past_shows,
-            "past_shows_count": past_shows_count,
-            "upcoming_shows": upcoming_shows,
-            "upcoming_shows_count": upcoming_shows_count
-        }
+    for show in shows:
+        if show.start_time > current_date:
+            upcoming_shows.append({
+                "artist_id": show.artist_id,
+                "artist_name": show.artist.name,
+                "artist_image_link": show.artist.image_link,
+                "start_time": format_datetime(str(show.start_time))
+            })
+
+        if show.start_time < current_date:
+            past_shows.append({
+                "artist_id": show.artist_id,
+                "artist_name": show.artist.name,
+                "artist_image_link": show.artist.image_link,
+                "start_time": format_datetime(str(show.start_time))
+            })
+
+    data = {
+        "id": venue_id,
+        "name": venue.name,
+        "address": venue.address,
+        "city": venue.city,
+        "state": venue.state,
+        "phone": venue.phone,
+        "genres": venue.genres,
+        "website": venue.website,
+        "facebook_link": venue.facebok_link,
+        "seeking_talent": venue.seeking_talent,
+        "seeking_description": venue.seeking_description,
+        "image_link": venue.image_link,
+        "past_shows": past_shows,
+        "past_shows_count": len(past_shows),  # count list items
+        "upcoming_shows": upcoming_shows,
+        "upcoming_shows_count": len(upcoming_shows) # count list items
+    }
 
     return render_template('pages/show_venue.html', venue=data)
 
@@ -210,7 +198,6 @@ def create_venue_submission():
                 address=form.address.data,
                 phone=form.phone.data,
                 genres = form.genres.data,
-                #genres=",".join(form.genres.data),  # convert genre array to string separated with commas ##!! Error, every letter is separated by commas
                 facebook_link=form.facebook_link.data,
                 image_link=form.image_link.data,
                 seeking_talent=form.seeking_talent.data,
@@ -345,33 +332,28 @@ def search_artists():
     # TODO: implement search on artists with partial string search. Ensure it is case-insensitive.
     # seach for "A" should return "Guns N Petals", "Matt Quevado", and "The Wild Sax Band".
     # search for "band" should return "The Wild Sax Band".
-    appSearch = request.form.get('search_term').strip()
-    stringMatches = Artist.query.filter(
-        Artist.name.ilike('%{}%'.format(appSearch))).all()
+    # strip removes trailing or leading spaces
+    appsearch = request.form.get('search_term').strip()
+    # Queryable Attribute, ilike insensitive, like sensitive. Formatting appsearch.
+    querymatches = Artist.query.filter(Artist.name.ilike('%{}%'.format(appsearch))).all()
 
     response = {}
     current_date = datetime.now()
     data = []
 
-    for artist in stringMatches:
-        artist_shows = Show.query.filter_by(artist_id=artist.id).all()
-        num_upcoming_shows = 0
-
-        for show in artist_shows:
-            if show.start_time > current_date:
-                num_upcoming_shows += 1
+    for artist in querymatches:
 
         data.append({
             'id': artist.id,
             'name': artist.name,
-            'num_upcoming_shows': num_upcoming_shows  # added to search_venues.html
+            'num_upcoming_shows': len(list(filter(lambda n: n.start_time > current_date, artist.shows))) # added to search_artist.html
         })
-        print(data)
+        # print(data)
 
-        response = {}
-        response['count'] = len(stringMatches)
+        response['count'] = len(querymatches)
         response['data'] = data
-    return render_template('pages/search_artists.html', results=response, search_term=appSearch)
+
+    return render_template('pages/search_artists.html', results=response, search_term=appsearch)
 
 #  ----------------------------------------------------------------
 
@@ -381,51 +363,44 @@ def show_artist(artist_id):
     # TODO: replace with real artist data from the artist table, using artist_id
     artist = Artist.query.get(artist_id)
     shows = Show.query.filter_by(artist_id=artist_id).all()
-    # # print(venue)
-    if not artist:
-        # Redirect home
-        return redirect(url_for('index'))
-    else:
-        # List and count shows
-        past_shows = []
-        past_shows_count = 0
-        upcoming_shows = []
-        upcoming_shows_count = 0
-        now = datetime.now()
-        for show in shows:
-            if show.start_time > now:
-                upcoming_shows_count += 1
-                upcoming_shows.append({
-                    "venue_id": show.venue_id,
-                    "venue_name": show.venue.name,
-                    "venue_image_link": show.venue.image_link,
-                    "start_time": format_datetime(str(show.start_time))
-                })
-            if show.start_time < now:
-                past_shows_count += 1
-                past_shows.append({
-                    "venue_id": show.venue_id,
-                    "venue_name": show.venue.name,
-                    "venue_image_link": show.venue.image_link,
-                    "start_time": format_datetime(str(show.start_time))
-                })
-        data = {
-            "id": artist.id,
-            "name": artist.name,
-            "city": artist.city,
-            "state": artist.state,
-            "phone": artist.phone,
-            "genres": artist.genres,
-            "image_link": artist.image_link,
-            "website": artist.website,
-            "facebook_link": artist.facebook_link,
-            "seeking_venue": artist.seeking_venue,
-            "seeking_description": artist.seeking_description,
-            "past_shows": past_shows,
-            "upcoming_shows": upcoming_shows,
-            "past_shows_count": len(past_shows),
-            "upcoming_shows_count": len(upcoming_shows)
-        }
+    past_shows = []
+    upcoming_shows = []
+    current_date = datetime.now()
+
+    for show in shows:
+        if show.start_time > current_date:
+            upcoming_shows.append({
+                "venue_id": show.venue_id,
+                "venue_name": show.venue.name,
+                "venue_image_link": show.venue.image_link,
+                "start_time": format_datetime(str(show.start_time))
+            })
+
+        if show.start_time < current_date:
+            past_shows.append({
+                "venue_id": show.venue_id,
+                "venue_name": show.venue.name,
+                "venue_image_link": show.venue.image_link,
+                "start_time": format_datetime(str(show.start_time))
+            })
+
+    data = {
+        "id": artist.id,
+        "name": artist.name,
+        "city": artist.city,
+        "state": artist.state,
+        "phone": artist.phone,
+        "genres": artist.genres,
+        "image_link": artist.image_link,
+        "website": artist.website,
+        "facebook_link": artist.facebook_link,
+        "seeking_venue": artist.seeking_venue,
+        "seeking_description": artist.seeking_description,
+        "past_shows": past_shows,
+        "upcoming_shows": upcoming_shows,
+        "past_shows_count": len(past_shows), # count list items
+        "upcoming_shows_count": len(upcoming_shows) # count list items
+    }
 
     return render_template('pages/show_artist.html', artist=data)
 
