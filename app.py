@@ -3,22 +3,22 @@
 #----------------------------------------------------------------------------#
 
 import json
-import string
+# import string
 import dateutil.parser
 import babel
-from flask import Flask, render_template, request, Response, flash, redirect, url_for, jsonify, abort
+from flask import Flask, render_template, request, flash, redirect, url_for, jsonify
 from flask_moment import Moment
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import func
+# from sqlalchemy import func
 import logging
 from logging import Formatter, FileHandler
-from flask_wtf import Form
+# from flask_wtf import Form
 from forms import *
 # Import additions
 from flask_migrate import Migrate
 import sys
-import config
-from models import db, Venue, Artist, Show
+from config import *
+from models import Venue, Artist, Show
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -29,11 +29,6 @@ app = Flask(__name__)
 moment = Moment(app)
 app.config.from_object('config')
 db = SQLAlchemy(app)
-
-# Import database models with app context
-# with app.app_context():
-from models import *
-
 migrate = Migrate(app, db)
 
 #----------------------------------------------------------------------------#
@@ -435,20 +430,20 @@ def show_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
-    form = ArtistForm()
-
+    # form = ArtistForm()
     # TODO: populate form with fields from artist with ID <artist_id>
     artist = Artist.query.get(artist_id)
-    form.name.data = artist.name
-    form.city.data = artist.city
-    form.state.data = artist.state
-    form.phone.data = artist.phone
-    form.genres.data = artist.genres
-    form.facebook_link.data = artist.facebook_link
-    form.website_link.data = artist.website
-    form.image_link.data = artist.image_link
-    form.seeking_venue.data = artist.seeking_venue
-    form.seeking_description.data = artist.seeking_description
+    form = ArtistForm(obj=artist)
+    # form.name.data = artist.name
+    # form.city.data = artist.city
+    # form.state.data = artist.state
+    # form.phone.data = artist.phone
+    # form.genres.data = artist.genres
+    # form.facebook_link.data = artist.facebook_link
+    # form.website_link.data = artist.website
+    # form.image_link.data = artist.image_link
+    # form.seeking_venue.data = artist.seeking_venue
+    # form.seeking_description.data = artist.seeking_description
 
     return render_template('forms/edit_artist.html', form=form, artist=artist)
 
@@ -458,7 +453,6 @@ def edit_artist(artist_id):
 def edit_artist_submission(artist_id):
     # TODO: take values from the form submitted, and update existing
     # artist record with ID <artist_id> using the new attributes
-
     form = ArtistForm(request.form)
 
     artist = Artist.query.get(artist_id)
@@ -475,9 +469,9 @@ def edit_artist_submission(artist_id):
             artist.image_link = form.image_link.data
             artist.seeking_venue = form.seeking_venue.data
             artist.seeking_description = form.seeking_description.data
-
             db.session.commit()
             flash('Artist, ' + request.form['name'] + ', was successfully updated!')
+            print(sys.exc_info())
         except Exception as error:
             db.session.rollback()
             flash('An error occured and artist, ' + request.form['name'] + ', was not updated.')
@@ -663,6 +657,10 @@ def server_error(error):
         file_handler.setLevel(logging.INFO)
         app.logger.addHandler(file_handler)
         app.logger.info('errors')
+
+@app.teardown_appcontext
+def shutdown_session(exception=None):
+    db.session.remove()
 
 #----------------------------------------------------------------------------#
 # Launch.
