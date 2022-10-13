@@ -17,6 +17,7 @@ import collections
 import collections.abc
 collections.Callable = collections.abc.Callable
 from flask_migrate import Migrate
+from sqlalchemy import desc
 import sys
 # from models import db, Venue, Artist, Show
 
@@ -67,7 +68,7 @@ def venues():
     # num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
 
     data = []
-    results = Venue.query.distinct(Venue.city, Venue.state).all()
+    results = Venue.query.distinct(Venue.city, Venue.state).order_by(Venue.state, Venue.city).all()
     current_date = datetime.now()
 
     for result in results:
@@ -101,7 +102,7 @@ def search_venues():
     # strip removes trailing or leading spaces
     appsearch = request.form.get('search_term').strip()
     # Queryable Attribute, ilike insensitive, like sensitive. Formatting appsearch.
-    querymatches = Venue.query.filter(Venue.name.ilike('%{}%'.format(appsearch))).all()
+    querymatches = Venue.query.filter(Venue.name.ilike('%{}%'.format(appsearch))).order_by(Venue.name).all()
 
     response = {}
     current_date = datetime.now()
@@ -160,7 +161,7 @@ def show_venue(venue_id):
         "phone": venue.phone,
         "genres": venue.genres,
         "website": venue.website,
-        "facebook_link": venue.facebok_link,
+        "facebook_link": venue.facebook_link,
         "seeking_talent": venue.seeking_talent,
         "seeking_description": venue.seeking_description,
         "image_link": venue.image_link,
@@ -321,7 +322,7 @@ def edit_venue_submission(venue_id):
 @app.route('/artists')
 def artists():
     # TODO: replace with real data returned from querying the database
-    data = Artist.query.all()
+    data = Artist.query.order_by(Artist.name).all()
 
     return render_template('pages/artists.html', artists=data)
 
@@ -335,7 +336,7 @@ def search_artists():
     # strip removes trailing or leading spaces
     appsearch = request.form.get('search_term').strip()
     # Queryable Attribute, ilike insensitive, like sensitive. Formatting appsearch.
-    querymatches = Artist.query.filter(Artist.name.ilike('%{}%'.format(appsearch))).all()
+    querymatches = Artist.query.filter(Artist.name.ilike('%{}%'.format(appsearch))).order_by(Artist.name).all()
 
     response = {}
     current_date = datetime.now()
