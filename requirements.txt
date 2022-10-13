@@ -1,12 +1,12 @@
 babel==2.9.0
-Flask==2.0
+Flask
 python-dateutil==2.6.0
 flask-moment==0.11.0
-flask-wtf==0.14.3
-flask_sqlalchemy==2.4.4
+flask-wtf
+flask_sqlalchemy
 virtualenv
 SQLAlchemy
 Flask-Migrate
+psycopg2-binary
 Jinja2==3.0
-MarkupSafe==2.0
-Werkzeug==2.0
+Werkzeug~=2.0.0
