@@ -20,8 +20,8 @@ import collections
 import collections.abc
 collections.Callable = collections.abc.Callable
 from flask_migrate import Migrate
-from models import Venue, Artist, Show
 import sys
+from models import db, Venue, Artist, Show
 
 #----------------------------------------------------------------------------#
 # App Config.
@@ -33,6 +33,8 @@ app.config.from_object('config')
 moment = Moment(app)
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+db.app = app
+db.init_app(app)
 
 #----------------------------------------------------------------------------#
 # Filters.
