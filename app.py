@@ -17,7 +17,6 @@ import collections
 import collections.abc
 collections.Callable = collections.abc.Callable
 from flask_migrate import Migrate
-from sqlalchemy import desc
 import sys
 # from models import db, Venue, Artist, Show
 
@@ -67,29 +66,34 @@ def venues():
     # TODO: replace with real venues data.
     # num_upcoming_shows should be aggregated based on number of upcoming shows per venue.
 
-    data = []
-    results = Venue.query.distinct(Venue.city, Venue.state).order_by(Venue.state, Venue.city).all()
+    city_state = Venue.query.distinct(Venue.city, Venue.state).order_by(Venue.state, Venue.city).all()
     current_date = datetime.now()
+    data = []
 
-    for result in results:
-        ven_city_state = {
-            "city": result.city,
-            "state": result.state
+    # Loop city and state for distinct city state dictionary, in desc order due to query
+    for place in city_state:
+        city_state_dict = {
+            "city": place.city,
+            "state": place.state       
         }
-        venues = Venue.query.filter_by(city=result.city, state=result.state).all()
+        # for each distinct city state, query venue list
+        venues = Venue.query.filter_by(city=place.city, state=place.state).all()
 
-        formatteddata = []
+        # Nested for. Create venue list for each city state.
+        venue_list = []
         for venue in venues:
-            formatteddata.append({
+            venue_list.append({
                 "id": venue.id,
                 "name": venue.name,
                 #lambda=anonymous function, returns single expression. Looping through and listing shows with future date; count items.
                 "num_upcoming_shows": len(list(filter(lambda n: n.start_time > current_date, venue.shows)))
             })
 
-        ven_city_state["venues"] = formatteddata
-        data.append(ven_city_state)
-
+        # Add venue key to city state dict. Each city state as key with venue list associated.
+        city_state_dict["venues"] = venue_list
+        # Append dictionary to list
+        data.append(city_state_dict)
+        
     return render_template('pages/venues.html', areas=data)
 
 #  ----------------------------------------------------------------
@@ -101,13 +105,14 @@ def search_venues():
     # search for "Music" should return "The Musical Hop" and "Park Square Live Music & Coffee"
     # strip removes trailing or leading spaces
     appsearch = request.form.get('search_term').strip()
-    # Queryable Attribute, ilike insensitive, like sensitive. Formatting appsearch.
+    # Queryable Attribute, ilike insensitive, like sensitive. Creating wild card string with format to query matches.
     querymatches = Venue.query.filter(Venue.name.ilike('%{}%'.format(appsearch))).order_by(Venue.name).all()
 
-    response = {}
+    results = {}
     current_date = datetime.now()
     data = []
 
+    # Append each venue match to data list
     for venue in querymatches:
 
         data.append({
@@ -117,11 +122,12 @@ def search_venues():
         })
         # print(data)
 
-        response['count'] = len(querymatches)
-        response['data'] = data
-        print(response)
+        # Add result count key and data key with venue match list to result dictionary
+        results['count'] = len(querymatches)
+        results['data'] = data
+        # print(results)
 
-    return render_template('pages/search_venues.html', results=response, search_term=appsearch)
+    return render_template('pages/search_venues.html', results=results, search_term=appsearch)
 
 #  ----------------------------------------------------------------
 
@@ -135,6 +141,7 @@ def show_venue(venue_id):
     upcoming_shows = []
     current_date = datetime.now()
 
+    # Create upcoming show list
     for show in shows:
         if show.start_time > current_date:
             upcoming_shows.append({
@@ -144,6 +151,7 @@ def show_venue(venue_id):
                 "start_time": format_datetime(str(show.start_time))
             })
 
+        #create past show list
         if show.start_time < current_date:
             past_shows.append({
                 "artist_id": show.artist_id,
@@ -152,6 +160,7 @@ def show_venue(venue_id):
                 "start_time": format_datetime(str(show.start_time))
             })
 
+    # Venue data (dict)
     data = {
         "id": venue_id,
         "name": venue.name,
@@ -188,10 +197,11 @@ def create_venue_submission():
     # TODO: insert form data as a new Venue record in the db, instead
     # TODO: modify data to be the data object returned from db insertion
 
-    form = VenueForm(request.form)
+    form = VenueForm(request.form) # request.form
 
-    if form.validate():
+    if form.validate(): # Check values against form validations
         try:
+            # Variable of Class with column data from form
             newvenue = Venue(
                 name=form.name.data,
                 city=form.city.data,
@@ -209,9 +219,9 @@ def create_venue_submission():
             db.session.add(newvenue)
             db.session.commit()
             flash('Venue, ' + newvenue.name + ', was successfully listed!')
-# TODO: on unsuccessful db insert, flash an error instead.
-# e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
-# see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
+        # TODO: on unsuccessful db insert, flash an error instead.
+        # e.g., flash('An error occurred. Venue ' + data.name + ' could not be listed.')
+        # see: http://flask.pocoo.org/docs/1.0/patterns/flashing/
         except Exception:
             db.session.rollback()
             print(sys.exc_info())
@@ -235,13 +245,15 @@ def delete_venue(venue_id):
     # clicking that button delete it from the db then redirect the user to the homepage
 
     try:
-        # Get venue by ID
+        # Get Venue, set name variable
         venue = Venue.query.get_or_404(venue_id)
         venue_name = venue.name
 
+        # Delete, Commit
         db.session.delete(venue)
         db.session.commit()
 
+        # Success flash
         flash('Venue ' + venue_name + ' was deleted, including all of their shows.')
         return render_template('pages/home.html')
     except ValueError:
@@ -256,8 +268,6 @@ def delete_venue(venue_id):
 
 @app.route('/venues/<int:venue_id>/edit', methods=['GET'])
 def edit_venue(venue_id):
-    # form = VenueForm()
-
     # TODO: populate form with values from venue with ID <venue_id>
     venue = Venue.query.get(venue_id)
     form = VenueForm(obj=venue)
@@ -281,7 +291,6 @@ def edit_venue(venue_id):
 def edit_venue_submission(venue_id):
     # TODO: take values from the form submitted, and update existing
     # venue record with ID <venue_id> using the new attributes
-
     form = VenueForm(request.form)
 
     venue = Venue.query.get(venue_id)
@@ -322,7 +331,16 @@ def edit_venue_submission(venue_id):
 @app.route('/artists')
 def artists():
     # TODO: replace with real data returned from querying the database
-    data = Artist.query.order_by(Artist.name).all()
+    artist = Artist.query.order_by(Artist.name).all()
+    current_date = datetime.now()
+    data = []
+
+    for artist in artist:
+        data.append({
+            'id': artist.id,
+            'name': artist.name,
+            'num_upcoming_shows': len(list(filter(lambda n: n.start_time > current_date, artist.shows))) # added to search_artist.html
+        })
 
     return render_template('pages/artists.html', artists=data)
 
@@ -409,7 +427,6 @@ def show_artist(artist_id):
 
 @app.route('/artists/<int:artist_id>/edit', methods=['GET'])
 def edit_artist(artist_id):
-    # form = ArtistForm()
     # TODO: populate form with fields from artist with ID <artist_id>
     artist = Artist.query.get(artist_id)
     form = ArtistForm(obj=artist)
@@ -448,6 +465,7 @@ def edit_artist_submission(artist_id):
             artist.image_link = form.image_link.data
             artist.seeking_venue = form.seeking_venue.data
             artist.seeking_description = form.seeking_description.data
+            
             db.session.commit()
             flash('Artist, ' + artist.name + ', was successfully updated!')
             print(sys.exc_info())
@@ -481,7 +499,7 @@ def create_artist_submission():  # from template
     # TODO: insert form data as a new Venue record in the db, instead
     # TODO: modify data to be the data object returned from db insertion
 
-    form = ArtistForm(request.form)  # request.form
+    form = ArtistForm(request.form)
 
     if form.validate():
         try:
